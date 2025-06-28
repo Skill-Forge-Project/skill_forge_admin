@@ -35,7 +35,8 @@ def get_metrics():
         metrics = app.get_metrics()
         return jsonify(metrics), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        app.logger.error(f"Error retrieving metrics: {e}")
+        return jsonify({"error": GENERIC_ERROR_MESSAGE}), 500
 
 # Clear cache endpoint
 @admin_bp.route('/admin/clear_cache', methods=['POST'])
@@ -48,7 +49,8 @@ def clear_cache():
         app.clear_cache()
         return jsonify({"message": "Cache cleared successfully"}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        app.logger.error(f"Error clearing cache: {e}")
+        return jsonify({"error": GENERIC_ERROR_MESSAGE}), 500
 
 # Check if user is admin
 @admin_bp.route('/admin/check', methods=['GET'])
