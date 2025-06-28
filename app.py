@@ -1,17 +1,31 @@
+import logging
 from flask import Flask
 from flask_cors import CORS
 from config import Config
 from extensions import db, jwt, migrate
 
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    
+    # Set up logging
+    if not app.logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        app.logger.addHandler(handler)
+        
+    app.logger.setLevel(logging.INFO)
 
     CORS(app)
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
 
+    from routes import admin_bp
+    app.register_blueprint(admin_bp)
 
     with app.app_context():
         db.create_all()
