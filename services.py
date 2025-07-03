@@ -1,7 +1,7 @@
 import requests, os
 from flask_jwt_extended import JWTManager, verify_jwt_in_request, get_jwt_identity
 from functools import wraps
-from flask import request, jsonify
+from flask import current_app, jsonify
 from dotenv import load_dotenv
 import logging
 import app
@@ -23,7 +23,7 @@ def token_required(f):
         try:
             verify_jwt_in_request()
         except Exception as e:
-            app.logger.error(f"JWT verification failed: {e}")
+            current_app.logger.error(f"JWT verification failed: {e}")
             return jsonify({"error": "Unauthorized", "message": "Invalid token"}), 401
         return f(*args, **kwargs)
     return decorated

@@ -1,5 +1,5 @@
 import os, requests
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, current_app
 from flask_jwt_extended import get_jwt_identity
 from extensions import db
 from services import token_required
@@ -10,6 +10,7 @@ import app
 load_dotenv()
 
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL")
+USERS_SERVICE_URL = os.getenv("USERS_SERVICE_URL")
 INTERNAL_SECRET = os.getenv("INTERNAL_SECRET")
 GENERIC_ERROR_MESSAGE = "An internal error has occurred."
 
@@ -35,8 +36,9 @@ def get_metrics():
         metrics = app.get_metrics()
         return jsonify(metrics), 200
     except Exception as e:
-        app.logger.error(f"Error retrieving metrics: {e}")
+        current_app.logger.error(f"Error retrieving metrics: {e}")
         return jsonify({"error": GENERIC_ERROR_MESSAGE}), 500
+
 
 # Clear cache endpoint
 @admin_bp.route('/admin/clear_cache', methods=['POST'])
@@ -46,11 +48,36 @@ def clear_cache():
     Endpoint to clear the cache.
     """
     try:
-        app.clear_cache()
+        current_app.clear_cache()
         return jsonify({"message": "Cache cleared successfully"}), 200
     except Exception as e:
-        app.logger.error(f"Error clearing cache: {e}")
+        current_app.logger.error(f"Error clearing cache: {e}")
         return jsonify({"error": GENERIC_ERROR_MESSAGE}), 500
+
+
+# Get the list of online users
+@admin_bp.route('/admin/online_users', methods=['GET'])
+@token_required
+def get_online_users():
+    """
+    Endpoint to retrieve the list of online users.
+    """
+    try:
+        response = requests.get(
+            f"{USERS_SERVICE_URL}/users/online",
+            headers={"INTERNAL-SECRET": INTERNAL_SECRET}
+        )
+        
+        if response.status_code == 200:
+            return jsonify(response.json()), 200
+        else:
+            current_app.logger.error(f"Failed to retrieve online users: {response.status_code} - {response.text}")
+            return jsonify({"error": "Failed to retrieve online users"}), response.status_code
+
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving online users: {e}")
+        return jsonify({"error": GENERIC_ERROR_MESSAGE}), 500
+
 
 # Check if user is admin
 @admin_bp.route('/admin/check', methods=['GET'])
@@ -78,7 +105,7 @@ def check_admin():
             return jsonify({"error": "Forbidden", "message": "Admin access required"}), 403
 
     except Exception as e:
-        app.logger.error(f"Error checking admin status: {e}")
+        current_app.logger.error(f"Error checking admin status: {e}")
         return jsonify({
             "error": "Internal Server Error",
             "message": GENERIC_ERROR_MESSAGE
